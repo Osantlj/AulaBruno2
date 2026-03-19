@@ -30,24 +30,52 @@ class ContatosController {
 
     // Criar dados
     async store(req, res) {
-        const contato = req.body;
-        try {
-            const resultado = await ContatosRepository.create(contato);
-            res.status(201).json(resultado);
-        } catch (error) {
-            if (error.erro && error.erro.code === 'ER_DUP_ENTRY') {
-                res.status(409).json({ 
-                    erro: "Conflito", 
-                    mensagem: `O Email ${contato.email} já está cadastrado. Escolha outro.` 
+            const { nome, email, telefone, endereco } = req.body;
+
+            if (!nome) {
+                return res.status(400).json({ 
+                    erro: "Bad Request", 
+                    mensagem: "É obrigatorio ter nome" 
                 });
-            } else {
-                res.status(500).json({ 
-                    erro: "Erro interno", 
-                    mensagem: "Não foi possível realizar o cadastro." 
+            }
+
+            if (!email && !telefone) {
+                return res.status(400).json({ 
+                    erro: "Bad Request", 
+                    mensagem: "É obrigatorio ter e-mail e telefone" 
+                });
+            }
+
+            const novoContato = { 
+                nome, 
+                email: email || null, 
+                telefone: telefone || null, 
+                endereco: endereco || null 
+            };
+            
+            try {
+                const resultado = await ContatosRepository.create(novoContato);
+                
+                return res.status(201).json({
+                    mensagem: "Contato criado",
+                    contatoId: resultado.insertId
+                });
+
+            } catch (error) {
+                if (error.erro && error.erro.code === 'ER_DUP_ENTRY') {
+                    return res.status(409).json({ 
+                        erro: "Conflict", 
+                        mensagem: `O e-mail '${email}' já existe` 
+                    });
+                }
+
+                console.error("Erro interno ao cadastrar contato:", error);
+                return res.status(500).json({ 
+                    erro: "Internal Server Error", 
+                    mensagem: "Erro no banco da dados" 
                 });
             }
         }
-    }
 
     // Atualizar dados
     async update(req, res) {
